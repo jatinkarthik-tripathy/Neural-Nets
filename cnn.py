@@ -2,34 +2,47 @@ import tensorflow as tf
 from tensorflow import keras
 import numpy as np
 import matplotlib.pyplot as plt
+from tensorflow.python.keras.utils import np_utils
 
 mnist = tf.keras.datasets.mnist
-(train_images, train_labels), (test_images, test_labels) = mnist.load_data()
+(x_train, y_train), (x_test, y_test) = mnist.load_data()
 
-print(train_images.shape)
-print(test_images.shape) 
+print("x_train shape:", x_train.shape, "y_train shape:", y_train.shape)
 
-train_images = train_images / 255.0
-test_images = test_images / 255.0
+x_train = x_train.astype('float32') / 255
+x_test = x_test.astype('float32') / 255
 
-plt.figure()
-plt.imshow(train_images[0], cmap=plt.cm.binary)
-plt.colorbar()
-plt.grid(False)
-plt.show()
+y_train = np_utils.to_categorical(y_train)
+y_test = np_utils.to_categorical(y_test)
 
-model = keras.Sequential([
-    keras.layers.Flatten(input_shape=(28, 28)),
-    keras.layers.Dense(128, activation=tf.nn.relu),
-    keras.layers.Dense(10, activation=tf.nn.softmax)
-])
+# plt.figure()
+# plt.imshow(train_images[0], cmap=plt.cm.binary)
+# plt.colorbar()
+# plt.grid(False)
+# plt.show()
 
-model.compile(optimizer='adam', 
-              loss='sparse_categorical_crossentropy',
-              metrics=['accuracy'])
+model = tf.keras.Sequential()
+model.add(tf.keras.layers.Conv2D(filters=64, kernel_size=(2, 2), padding='same', activation='relu', input_shape=(28, 28, 1)))
+model.add(tf.keras.layers.MaxPooling2D(pool_size=2))
+model.add(tf.keras.layers.Dropout(0.3))
 
-model.fit(train_images, train_labels, epochs=20)
+model.add(tf.keras.layers.Conv2D(filters=32, kernel_size=(2, 2), padding='same', activation='relu'))
+model.add(tf.keras.layers.MaxPooling2D(pool_size=2))
+model.add(tf.keras.layers.Dropout(0.3))
 
-test_loss, test_acc = model.evaluate(test_images, test_labels)
+model.add(tf.keras.layers.Flatten())
+model.add(tf.keras.layers.Dense(256, activation='relu'))
+model.add(tf.keras.layers.Dropout(0.5))
+model.add(tf.keras.layers.Dense(10, activation='softmax'))
+
+#model.summary()
+
+model.compile(loss='categorical_crossentropy', 
+				optimizer='adam', 
+				metrics=['accuracy'])
+
+model.fit(np.array(x_train).reshape([-1, 28, 28, 1]), np.array(y_train), batch_size=64, epochs=20)
+
+test_loss, test_acc = model.evaluate(np.array(x_test).reshape([-1, 28, 28, 1]), np.array(y_test))
 
 print('Test accuracy:', test_acc)
