@@ -7,7 +7,7 @@ class seq2seq:
         self.out_len = out_len
         self.latent_dim = 256
 
-        #training maodel
+        #training model:
         # Define an input sequence and process it.
         encoder_inputs =  tf.keras.layers.Input(shape=(None, self.inp_len))
         encoder =  tf.keras.layers.CuDNNLSTM(self.latent_dim, return_state=True)
@@ -46,12 +46,12 @@ class seq2seq:
     def load_model():
         model.load_weights(checkpoint_path)
 
-    def test(self, input_str):
+    def test(self, input_str, start_seq_index):
         #getting the encoded str
         encoded_states = self.encoder_model.predict(input_str)
 
         self.target_seq = np.zeros ( (1 , 1 , self.out_len) )
-        self.target_seq[ 0 , 0 , self.start_seq_index ] = 1	
+        self.target_seq[ 0 , 0 , start_seq_index ] = 1	
 
         #getting the output str
         output_str, _, _ = self.decoder_model([target_seq] + encoded_states)
