@@ -47,7 +47,6 @@ if __name__ == '__main__':
 	try:
 		with open('data/clean/conversations.json', 'r') as f:
 			pass
-		print(f'{Fore.GREEN}Processing Complete{Style.RESET_ALL}')
 	except FileNotFoundError:
 		create_convo(id_dict)
-		print(f'{Fore.GREEN}Processing Complete{Style.RESET_ALL}')
+	print(f'{Fore.GREEN}Processing Complete{Style.RESET_ALL}')
