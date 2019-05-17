@@ -30,7 +30,8 @@ def vocab_build():
 
 	ques = []
 	ans = []
-	vocab = []
+	input_vocab = []
+	output_vocab = []
 	counter = 0
 	tot = len(convs)
 	print(f'Total conversations: {tot}')
@@ -43,34 +44,42 @@ def vocab_build():
 		ans.append(a)
 
 		for word in q.split(' '):
-			if word not in vocab:
-				vocab.append(word)
+			if word not in input_vocab:
+				input_vocab.append(word)
 		for word in a.split(' '):
-			if word not in vocab:
-				vocab.append(word)
+			if word not in output_vocab:
+				output_vocab.append(word)
 		counter += 1
 		printProgressBar(counter, tot, prefix = 'Progress:', suffix = 'Complete', length = 50)
 
-	vocab = sorted(vocab)
-	with open('data/vocab', 'w', encoding='utf8') as f:
-		for word in vocab:
-			f.write(word+'\n')
+	input_vocab = sorted(input_vocab)
+	input_vocab = dict([(char, i) for i, char in enumerate(input_vocab)])
+	with open('data/input_vocab.json', 'w', encoding='utf8') as f:
+		json.dump(input_vocab, f, indent=4)
+
+	output_vocab = sorted(output_vocab)
+	output_vocab = dict([(char, i) for i, char in enumerate(output_vocab)])
+	with open('data/output_vocab.json', 'w', encoding='utf8') as f:
+		json.dump(output_vocab, f, indent=4)
+
 	with open('data/train.from', 'w', encoding='utf8') as f:
 		for q in ques:
 			f.write(q+'\n')
 	with open('data/train.to', 'w', encoding='utf8') as f:
 		for a in ans:
 			f.write(a+'\n')
-	return vocab, ques, ans
 
 if __name__ == '__main__':
 	try:
-		with open('data/vocab', 'r', encoding='utf8') as f:
-			vocab = [word.strip('\n') for word in f]
 		with open('data/train.from', 'r', encoding='utf8') as f:
-			ques = [word.strip('\n') for word in f]
+			pass
 		with open('data/train.to', 'r', encoding='utf8') as f:
-			ans = [word.strip('\n') for word in f]
+			pass
+
+		with open('data/input_vocab.json', 'r', encoding='utf8') as f:
+			pass
+		with open('data/output_vocab.json', 'r', encoding='utf8') as f:
+			pass
 	except FileNotFoundError:
-		vocab, ques, ans = vocab_build()
+		vocab_build()
 	print(f'{Fore.GREEN}Data Formatting Complete{Style.RESET_ALL}')
