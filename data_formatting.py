@@ -1,6 +1,5 @@
 import json
 from colorama import Fore, Style, init
-from multiprocessing import Pool
 init()
 
 
