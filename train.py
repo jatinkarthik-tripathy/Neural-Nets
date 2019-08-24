@@ -5,47 +5,6 @@ from seq2seq import seq2seq
 init()
 
 if __name__ == '__main__':
-    # reading the data
-    # try:
-    # 	with open('data/train.from', 'r', encoding='utf8') as f:
-    # 		ques = [word.strip('\n') for word in f]
-    # 	with open('data/train.to', 'r', encoding='utf8') as f:
-    # 		ans = [word.strip('\n') for word in f]
-    # 	with open('data/input_vocab.json', 'r', encoding='utf8') as f:
-    # 		input_vocab = json.load(f)
-    # 	with open('data/output_vocab.json', 'r', encoding='utf8') as f:
-    # 		output_vocab = json.load(f)
-    # except FileNotFoundError:
-    # 	print(f'{Fore.RED}Please format data before training{Style.RESET_ALL}')
-
-    # inp_len = len(input_vocab)
-    # out_len = len(output_vocab)
-
-    # q_len = len(ques) // 1024
-    # a_len = len(ques) // 1024
-    # max_inp_len = max([len(word) for word in ques])
-    # max_out_len = max([len(word) for word in ans])
-    # print(f'num of elements for encoder input: {q_len*max_inp_len*inp_len}')
-
-    # encoder_inp = np.zeros((q_len, max_inp_len, inp_len), dtype='bool')
-    # decoder_inp = np.zeros((a_len, max_out_len, out_len), dtype='bool')
-    # decoder_out = np.zeros((a_len, max_out_len, out_len), dtype='bool')
-
-	# for i, (input_text, target_text) in enumerate(zip(input_texts, target_texts)):
-	# 	for t, char in enumerate(input_text):
-	# 		encoder_input_data[i, t, input_token_index[char]] = 1.
-	# 	for t, char in enumerate(target_text):
-	# 		# decoder_target_data is ahead of decoder_input_data by one timestep
-	# 		decoder_input_data[i, t, target_token_index[char]] = 1.
-	# 		if t > 0:
-	# 			# decoder_target_data will be ahead by one timestep
-	# 			# and will not include the start character.
-	# 			decoder_target_data[i, t - 1, target_token_index[char]] = 1.
-
-	# 		for i, (q, a) in enumerate(zip(ques, ans)):
-	# 			for t, word in enumerate(q):
-	# 				print(t, word)
-
 	data_path = 'eng-fra/fra.txt'
 	num_samples = 10000
 	input_texts = []
