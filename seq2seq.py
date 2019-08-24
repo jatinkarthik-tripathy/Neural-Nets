@@ -1,23 +1,22 @@
 import tensorflow as tf
-import os
-
+import numpy as np
 class seq2seq:
-    def create_models(self, inp_len, out_len):
+    def create_models(self, inp_len, out_len, latent_dim=256):
         self.inp_len = inp_len
         self.out_len = out_len
-        self.latent_dim = 256
+        self.latent_dim = latent_dim
 
         #training model:
         # Define an input sequence and process it.
         encoder_inputs =  tf.keras.layers.Input(shape=(None, self.inp_len))
-        encoder =  tf.keras.layers.CuDNNLSTM(self.latent_dim, return_state=True)
+        encoder =  tf.keras.layers.LSTM(self.latent_dim, return_state=True)
         encoder_outputs, state_h, state_c = encoder(encoder_inputs)
 
         encoder_states = [state_h, state_c]
 
         # Set up the decoder, using `encoder_states` as initial state.
         decoder_inputs = tf.keras.layers.Input(shape=(None, self.out_len))
-        decoder_lstm = tf.keras.layers.CuDNNLSTM(self.latent_dim, return_sequences=True, return_state=True)
+        decoder_lstm = tf.keras.layers.LSTM(self.latent_dim, return_sequences=True, return_state=True)
         decoder_outputs, _, _ = decoder_lstm(decoder_inputs, initial_state=encoder_states)
         decoder_dense = tf.keras.layers.Dense(self.out_len, activation='softmax')
         decoder_outputs = decoder_dense(decoder_outputs)
@@ -36,26 +35,51 @@ class seq2seq:
         decoder_outputs = decoder_dense(decoder_outputs)
         self.decoder_model = tf.keras.models.Model([decoder_inputs] + decoder_states_inputs, [decoder_outputs] + decoder_states)
 
-    def train(self, enc_in, dec_in, dec_out, batch = 100, epochs = 1):
-        self.checkpoint_path = "training/cp.ckpt"
-        checkpoint_dir = os.path.dirname(self.checkpoint_path)
-        cp_callback = tf.keras.callbacks.ModelCheckpoint(self.checkpoint_path, save_weights_only=True, verbose=1)
-        self.train_model.fit([enc_in, dec_in], dec_out, batch_size = batch, epochs = epochs, callbacks = [cp_callback])	 
+    def train(self, enc_in, dec_in, dec_out, batch = 100, epochs = 20):
+        self.train_model.fit([enc_in, dec_in], dec_out, batch_size = batch, epochs = epochs)	 
         self.train_model.save('seq2seq_model.h5')
 
-    def load_model():
-        model.load_weights(checkpoint_path)
+    def test(self, input_seq, input_token_index, target_token_index, num_decoder_tokens, max_decoder_seq_length):
+        # Reverse-lookup token index to decode sequences back to
+        # something readable.
+        reverse_target_char_index = dict(
+            (i, char) for char, i in target_token_index.items())
 
-    def test(self, input_str, start_seq_index):
-        #getting the encoded str
-        encoded_states = self.encoder_model.predict(input_str)
+        # Encode the input as state vectors.
+        states_value = self.encoder_model.predict(input_seq)
 
-        self.target_seq = np.zeros ( (1 , 1 , self.out_len) )
-        self.target_seq[ 0 , 0 , start_seq_index ] = 1	
+        # Generate empty target sequence of length 1.
+        target_seq = np.zeros((1, 1, num_decoder_tokens))
+        # Populate the first character of target sequence with the start character.
+        target_seq[0, 0, target_token_index['\t']] = 1.
 
-        #getting the output str
-        output_str, _, _ = self.decoder_model([target_seq] + encoded_states)
-        return output_str
+        # Sampling loop for a batch of sequences
+        # (to simplify, here we assume a batch of size 1).
+        stop_condition = False
+        decoded_sentence = ''
+        while not stop_condition:
+            output_tokens, h, c = self.decoder_model.predict(
+                [target_seq] + states_value)
+
+            # Sample a token
+            sampled_token_index = np.argmax(output_tokens[0, -1, :])
+            sampled_char = reverse_target_char_index[sampled_token_index]
+            decoded_sentence += sampled_char
+
+            # Exit condition: either hit max length
+            # or find stop character.
+            if (sampled_char == '\n' or
+                    len(decoded_sentence) > max_decoder_seq_length):
+                stop_condition = True
+
+            # Update the target sequence (of length 1).
+            target_seq = np.zeros((1, 1, num_decoder_tokens))
+            target_seq[0, 0, sampled_token_index] = 1.
+
+            # Update states
+            states_value = [h, c]
+
+        return decoded_sentence
 
 
 

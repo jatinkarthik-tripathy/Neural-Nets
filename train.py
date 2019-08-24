@@ -1,34 +1,122 @@
 import numpy as np
 import json
 from colorama import Fore, Style, init
+from seq2seq import seq2seq
 init()
 
 if __name__ == '__main__':
-	# reading the data
-	try:
-		with open('data/train.from', 'r', encoding='utf8') as f:
-			ques = [word.strip('\n') for word in f]
-		with open('data/train.to', 'r', encoding='utf8') as f:
-			ans = [word.strip('\n') for word in f]
-		with open('data/input_vocab.json', 'r', encoding='utf8') as f:
-			input_vocab = json.load(f)
-		with open('data/output_vocab.json', 'r', encoding='utf8') as f:
-			output_vocab = json.load(f)
-	except FileNotFoundError:
-		print(f'{Fore.RED}Please format data before training{Style.RESET_ALL}')
+    # reading the data
+    # try:
+    # 	with open('data/train.from', 'r', encoding='utf8') as f:
+    # 		ques = [word.strip('\n') for word in f]
+    # 	with open('data/train.to', 'r', encoding='utf8') as f:
+    # 		ans = [word.strip('\n') for word in f]
+    # 	with open('data/input_vocab.json', 'r', encoding='utf8') as f:
+    # 		input_vocab = json.load(f)
+    # 	with open('data/output_vocab.json', 'r', encoding='utf8') as f:
+    # 		output_vocab = json.load(f)
+    # except FileNotFoundError:
+    # 	print(f'{Fore.RED}Please format data before training{Style.RESET_ALL}')
 
-	inp_len = len(input_vocab)
-	out_len = len(output_vocab)
+    # inp_len = len(input_vocab)
+    # out_len = len(output_vocab)
 
-	max_inp_len = max([len(word) for word in ques])
-	max_out_len = max([len(word) for word in ans])
-	print(f'num of elements for encoder input: {len(ques)*max_inp_len*inp_len}')
+    # q_len = len(ques) // 1024
+    # a_len = len(ques) // 1024
+    # max_inp_len = max([len(word) for word in ques])
+    # max_out_len = max([len(word) for word in ans])
+    # print(f'num of elements for encoder input: {q_len*max_inp_len*inp_len}')
 
-	encoder_inp = np.zeros((len(ques), max_inp_len, inp_len), dtype='bool')
-	decoder_inp = np.zeros((len(ans), max_out_len, out_len), dtype='float32')
-	decoder_out = np.zeros((len(ans), max_out_len, out_len), dtype='float32')
+    # encoder_inp = np.zeros((q_len, max_inp_len, inp_len), dtype='bool')
+    # decoder_inp = np.zeros((a_len, max_out_len, out_len), dtype='bool')
+    # decoder_out = np.zeros((a_len, max_out_len, out_len), dtype='bool')
 
-	for i, (q, a) in enumerate(zip(ques, ans)):
-		for t, word in enumerate(q):
-			print(t, word)
+	# for i, (input_text, target_text) in enumerate(zip(input_texts, target_texts)):
+	# 	for t, char in enumerate(input_text):
+	# 		encoder_input_data[i, t, input_token_index[char]] = 1.
+	# 	for t, char in enumerate(target_text):
+	# 		# decoder_target_data is ahead of decoder_input_data by one timestep
+	# 		decoder_input_data[i, t, target_token_index[char]] = 1.
+	# 		if t > 0:
+	# 			# decoder_target_data will be ahead by one timestep
+	# 			# and will not include the start character.
+	# 			decoder_target_data[i, t - 1, target_token_index[char]] = 1.
 
+	# 		for i, (q, a) in enumerate(zip(ques, ans)):
+	# 			for t, word in enumerate(q):
+	# 				print(t, word)
+
+	data_path = 'eng-fra/fra.txt'
+	num_samples = 10000
+	input_texts = []
+	target_texts = []
+	input_characters = set()
+	target_characters = set()
+	with open(data_path, 'r', encoding='utf-8') as f:
+		lines = f.read().split('\n')
+	for line in lines[: min(num_samples, len(lines) - 1)]:
+		input_text, target_text = line.split('\t')
+		# We use "tab" as the "start sequence" character
+		# for the targets, and "\n" as "end sequence" character.
+		target_text = '\t' + target_text + '\n'
+		input_texts.append(input_text)
+		target_texts.append(target_text)
+		for char in input_text:
+			if char not in input_characters:
+				input_characters.add(char)
+		for char in target_text:
+			if char not in target_characters:
+				target_characters.add(char)
+
+	input_characters = sorted(list(input_characters))
+	target_characters = sorted(list(target_characters))
+	num_encoder_tokens = len(input_characters)
+	num_decoder_tokens = len(target_characters)
+	max_encoder_seq_length = max([len(txt) for txt in input_texts])
+	max_decoder_seq_length = max([len(txt) for txt in target_texts])
+
+	print('Number of samples:', len(input_texts))
+	print('Number of unique input tokens:', num_encoder_tokens)
+	print('Number of unique output tokens:', num_decoder_tokens)
+	print('Max sequence length for inputs:', max_encoder_seq_length)
+	print('Max sequence length for outputs:', max_decoder_seq_length)
+
+	input_token_index = dict(
+		[(char, i) for i, char in enumerate(input_characters)])
+	target_token_index = dict(
+		[(char, i) for i, char in enumerate(target_characters)])
+
+	encoder_input_data = np.zeros(
+		(len(input_texts), max_encoder_seq_length, num_encoder_tokens),
+		dtype='float32')
+	decoder_input_data = np.zeros(
+		(len(input_texts), max_decoder_seq_length, num_decoder_tokens),
+		dtype='float32')
+	decoder_target_data = np.zeros(
+		(len(input_texts), max_decoder_seq_length, num_decoder_tokens),
+		dtype='float32')
+
+	for i, (input_text, target_text) in enumerate(zip(input_texts, target_texts)):
+		for t, char in enumerate(input_text):
+			encoder_input_data[i, t, input_token_index[char]] = 1.
+		for t, char in enumerate(target_text):
+			# decoder_target_data is ahead of decoder_input_data by one timestep
+			decoder_input_data[i, t, target_token_index[char]] = 1.
+			if t > 0:
+				# decoder_target_data will be ahead by one timestep
+				# and will not include the start character.
+				decoder_target_data[i, t - 1, target_token_index[char]] = 1.
+
+	s2s = seq2seq()
+	s2s.create_models(num_encoder_tokens, num_decoder_tokens)
+	s2s.train(encoder_input_data, decoder_input_data, decoder_target_data)
+
+	for seq_index in range(100):
+			# Take one sequence (part of the training set)
+		# for trying out decoding.
+		input_seq = encoder_input_data[seq_index: seq_index + 1]
+		decoded_sentence = s2s.test(input_seq, input_token_index, target_token_index, 
+                              num_decoder_tokens, max_decoder_seq_length)
+		print('-')
+		print('Input sentence:', input_texts[seq_index])
+		print('Decoded sentence:', decoded_sentence)
